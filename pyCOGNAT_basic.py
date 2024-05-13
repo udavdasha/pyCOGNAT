@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os, sys, re, codecs, platform
+import os, sys, re, codecs, platform, time
 import copy
 import tkinter
 import tkinter.font
@@ -381,7 +381,14 @@ def get_sorted_domains(domains):
             regions = domain_string.split(" ")
             for r in regions:
                 fields = r.split("..")
-                values = (int(fields[0]), int(fields[1]), float(fields[2]), float(fields[3]), domain_name)
+                hmm_begin = 0
+                hmm_end = 0
+                try:
+                    hmm_begin = int(fields[4])
+                    hmm_end = int(fields[5])
+                except ValueError:
+                    pass
+                values = (int(fields[0]), int(fields[1]), float(fields[2]), float(fields[3]), hmm_begin, hmm_end, domain_name)
                 sorted_regions.append(values)
     except IndexError:
         print ("IndexError occured in <get_sorted_domains>")
@@ -398,8 +405,8 @@ def get_domain_rectangles(additional_data, x0, y0, direction, domain_height, gen
     sorted_regions = get_sorted_domains(domains)
     # 2) Creating domain rectangles
     for region in sorted_regions:
-        domain = region[4]
-        data = "%i..%i..%s..%s..%s" % tuple(region)
+        domain = region[6]
+        data = "%i..%i..%s..%s..%i..%i..%s" % tuple(region)
         data += "..%s" % additional_data
         color = base_domain_color
         if domain in domain_to_color:
@@ -519,18 +526,17 @@ def report_gene_to_widget(widget, p, real_begin, real_end, real_direction, nucl_
                     domain_full_name = "Unknown domain name"
                     if domain_name in domain_to_name:
                         domain_full_name = domain_to_name[domain_name]
-                    values = (int(fields[0]), int(fields[1]), float(fields[2]), float(fields[3]), domain_name, domain_full_name)
-
+                    values = (int(fields[0]), int(fields[1]), float(fields[2]), float(fields[3]), fields[4], fields[5], domain_name, domain_full_name)
                     sorted_regions.append(values)
         except IndexError:
             print ("IndexError occured in <report_gene_to_widget>")
             raise
         sorted_regions.sort(key = lambda k: int(k[0]), reverse = False)
-        widget.add_string("Domain\tbegin\tend\tscore\tevalue\n")
+        widget.add_string("Domain\tbegin\tend\tscore\tevalue\thmm_b\thmm_e\n")
         for region in sorted_regions:
-            # [0]   [1]    [2]    [3]      [4]
-            #begin..end..evalue..score..domain
-            widget.add_string("%s\t%i\t%i\t%.1f\t%s\t%s\n" % (region[4], region[0], region[1], region[3], region[2], region[5]))
+            # [0]   [1]    [2]    [3]     [4]        [5]     [6]         [7]
+            #begin..end..evalue..score..hmm_begin..hmm_end..domain..domain_full_name
+            widget.add_string("%s\t%i\t%i\t%.1f\t%s\t%s\t%s\t%s\n" % (region[6], region[0], region[1], region[3], region[2], region[4], region[5], region[7]))
     widget.add_string("\n")
     widget.add_tagged_string("Protein sequence (FASTA):", "header")
     widget.add_string(">%s %s [%s]\n" % (p.protein_id.strip("*"), p.product, curr_org))
@@ -552,15 +558,15 @@ def report_domain_to_widget(widget, p, data, domain_to_name):
     widget.add_string("length (aa): %s\n\n" % len(p.sequence))
 
     widget.add_tagged_string("Current domain data:", "header")
-    widget.add_string("Domain\tbegin\tend\tscore\tevalue\tname\n")
+    widget.add_string("Domain\tbegin\tend\tscore\tevalue\thmm_b\thmm_e\tname\n")
     fields = data.split("..")
     begin = int(fields[0])
     end = int(fields[1])
-    domain_name = fields[4]
+    domain_name = fields[6]
     domain_full_name = "Unknown domain name"
     if domain_name in domain_to_name:
         domain_full_name = domain_to_name[domain_name]
-    widget.add_string("%s\t%i\t%i\t%.1f\t%s\t%s\n\n" % (domain_name, begin, end, float(fields[3]), float(fields[2]), domain_full_name))
+    widget.add_string("%s\t%i\t%i\t%.1f\t%s\t%s\t%s\t%s\n\n" % (domain_name, begin, end, float(fields[3]), float(fields[2]), fields[4], fields[5], domain_full_name))
     widget.add_tagged_string("Current region sequence:", "header")
     widget.add_string(">%s_%i-%i\n" % (p.protein_id.strip("*"), begin, end))
     widget.add_string("%s\n" % p.sequence[begin - 1:end + 1])

@@ -128,6 +128,12 @@ class ProjectData(tkinter.Frame):
     def get_overlap(self):
         return float(self.overlap_widget.get().strip())
 
+    def get_max_distance(self):
+        return int(self.max_distance_widget.get().strip())
+
+    def get_max_hmm_overlap(self):
+        return float(self.max_hmm_overlap_widget.get().strip())
+
     def get_domain_to_color(self):
         domain_to_color = dict()
         strings = self.domain_colors.get_content_as_list()
@@ -172,14 +178,15 @@ class ProjectData(tkinter.Frame):
         self.domain_colors.enable_text()
         self.evalue_widget.configure(state = tkinter.NORMAL)
         self.overlap_widget.configure(state = tkinter.NORMAL)
+        self.unite_check.configure(state = tkinter.NORMAL)
+        self.max_distance_widget.configure(state = tkinter.NORMAL)
+        self.max_hmm_overlap_widget.configure(state = tkinter.NORMAL)
         self.add_clade_button.configure(state = tkinter.NORMAL, background = self.host.header, foreground = "#FFFFFF")
         if add_defaults:
             self.evalue_widget.insert(tkinter.END, "1e-5")
             self.overlap_widget.insert(tkinter.END, "5")
-
-        #self.unite_check.configure(state = tkinter.NORMAL)
-        #self.max_distance_widget.configure(state = tkinter.NORMAL)
-        #self.max_hmm_overlap_widget.configure(state = tkinter.NORMAL)
+            self.max_distance_widget.insert(tkinter.END, "50")
+            self.max_hmm_overlap_widget.insert(tkinter.END, "30")
 
     def fix_status(self, ids_path = None, database_path = None):
         self.project_name_widget.configure(state = tkinter.DISABLED)

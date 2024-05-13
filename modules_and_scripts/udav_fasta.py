@@ -5,7 +5,7 @@ Currently the following formats are accepted: My_Ref, My (v1.3), Uniprot (v1.4),
                                               NCBI (v.2.4), Olesya (v.2.10), COGcollator (v.2.11),
                                               German (v.2.12)
 Now exceptions are considered: FIX: version 2.12
-------- Version: 2.38
+------- Version: 2.40
 Methods included in this module:
         1) dict unredun_org (input_filename, output_filename)
            a)  Reads <input_filename> which is expected to be *.org file produces with the 
@@ -760,6 +760,7 @@ def read_fasta(filename, sample_filename, occurrence_filename, protein_occur, ve
                             directions[curr_interest][2] += 1
 
                     if len(seqs) != 0:
+                        seqs[-1].sequence = "".join(seqs[-1].sequence) # FIX (version 2.40): this (compared to += string) is much faster
                         if seqs[-1].length_in_range(min_len, max_len):                    
                             if sample_filename != None:
                                 table_data_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (seqs[-1].protein_id, seqs[-1].gi, seqs[-1].organism, len(seqs[-1].sequence), seqs[-1].source_name, seqs[-1].source_record, seqs[-1].locus))
@@ -783,13 +784,15 @@ def read_fasta(filename, sample_filename, occurrence_filename, protein_occur, ve
                                 seqs.pop()
                         else:
                             if sample_filename != None: reject_file.write("%s\t%i\t%s\n" % (seqs[-1].protein_id, len(seqs[-1].sequence), seqs[-1].product))
-                            seqs.pop()                    
+                            seqs.pop()
+                    curr_seq.sequence = list() # FIX (version 2.40): this (compared to += string) is much faster
                     seqs.append(curr_seq)
 
             else: # Sequence string
                  if take_seq:                
-                    seqs[-1].sequence += string                
+                    seqs[-1].sequence.append(string) # FIX (version 2.40): this (compared to += string) is much faster
         if len(seqs) != 0: # Printing the last sequence into the sample
+            seqs[-1].sequence = "".join(seqs[-1].sequence) # FIX (version 2.40): this (compared to += string) is much faster
             if seqs[-1].length_in_range(min_len, max_len):                    
                 if sample_filename != None:                
                     table_data_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (seqs[-1].protein_id, seqs[-1].gi, seqs[-1].organism, len(seqs[-1].sequence), seqs[-1].source_name, seqs[-1].source_record, seqs[-1].locus))

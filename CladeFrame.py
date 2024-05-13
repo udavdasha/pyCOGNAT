@@ -3,6 +3,7 @@ import sys, os, re, time, platform, random
 import tkinter
 import tkinter.ttk
 import tkinter.font
+import tkinter.colorchooser
 import pyCOGNAT_basic
 
 def get_canvas(parent, width, height):
@@ -68,6 +69,7 @@ class CladeFrame(tkinter.Frame):
         self.main_canvas.bind("<Button-1>", self.canvas_clicked)
         self.main_canvas.bind("<Double-Button-1>", self.canvas_doubleclicked)
         self.main_canvas.bind("<MouseWheel>", self.on_mousewheel)
+        self.legend_canvas.bind("<Double-Button-1>", self.legend_doubleclicked)
 
     def create_UI(self):
         self.grid_rowconfigure(0, weight = 1)
@@ -103,6 +105,8 @@ class CladeFrame(tkinter.Frame):
         self.sort_progress.grid(row = 6, column = 1, sticky = "NSEW", padx = self.p, pady = self.p)
         self.domain_progress = tkinter.ttk.Progressbar(left_part, value = 0, style = "success.Striped.Horizontal.TProgressbar")
         self.domain_progress.grid(row = 7, column = 0, sticky = "NSEW", padx = self.p, pady = self.p)
+        self.draw_progress = tkinter.ttk.Progressbar(left_part, value = 0, style = "success.Striped.Horizontal.TProgressbar")
+        self.draw_progress.grid(row = 7, column = 1, sticky = "NSEW", padx = self.p, pady = self.p)
         self.add_colors = pyCOGNAT_basic.TextFrameWithLabel(left_part, self.p, self.host.back, "#000000", "Add. domain colors:", ("Arial", 10, "bold"), None)
         self.add_colors.grid(row = 8, column = 0, columnspan = 2, sticky = "NSEW")
         central_panel.add(left_part)
@@ -231,6 +235,23 @@ class CladeFrame(tkinter.Frame):
         else:
             self.host.set_status("ERROR", "Cannot make random colors for not an empty canvas", "red")
 
+    def legend_doubleclicked(self, event):
+        real_x = self.legend_canvas.canvasx(event.x) # This calculates canvas coordinates, not the screen
+        real_y = self.legend_canvas.canvasy(event.y)
+        item = self.legend_canvas.find_closest(real_x, real_y)
+        tags = self.legend_canvas.itemcget(item, "tags")
+        if tags != "":
+            domain_id = tags.split(" ")[1]
+            curr_color = self.base_domain_color
+            if domain_id in self.domain_to_color:
+                curr_color = self.domain_to_color[domain_id]
+            new_color = tkinter.colorchooser.askcolor(curr_color, title = "Choose a color for the following domain: %s" % domain_id)
+            new_color_hex = new_color[1]
+            if new_color_hex != None:
+                self.domain_to_color[domain_id] = new_color_hex
+                self.legend_canvas.itemconfigure(item, fill = new_color_hex)
+                self.redraw(self.domain_to_color)
+
     def on_mousewheel(self, event):
         scroll_value = None
         system = platform.system()
@@ -340,7 +361,7 @@ class CladeFrame(tkinter.Frame):
     def draw_data(self):
         # 1) Renamning the tab
         self.rename_tab()
-        # 2) Obtaining neighborhood obejcts
+        # 2) Obtaining parameters
         protein_ids = self.clade_ids.get_content_as_list()
         self.protein_ids_safe = self.clade_ids.get_content_as_list()
         protein_num = len(protein_ids)
@@ -366,6 +387,8 @@ class CladeFrame(tkinter.Frame):
         self.neighbor_progress["value"] = 0
         self.sort_progress["value"] = 0
         self.domain_progress["value"] = 0
+        self.draw_progress["value"] = 0
+        # 3) Obtaining neighborhood obejcts
         try:
             sys.path.append(script_path)
             import COGNAT_basic
@@ -391,6 +414,11 @@ class CladeFrame(tkinter.Frame):
                     filtered_dict[p_id] = self.id_to_domains[p_id]
             self.id_to_domains = filtered_dict
             import udav_soft
+            if self.host.project_data_tab.unite_domains.get() == True: # Domain should be united under given options
+                max_distance = self.host.project_data_tab.get_max_distance()
+                max_hmm_overlap = self.host.project_data_tab.get_max_hmm_overlap()
+                print ("Hits of the same domain will be united if a) they are separated by less than %i residues and b) regions in a profile HMM which cover its hits overlap by less than %.2f percent" % (max_distance, max_hmm_overlap))
+                self.id_to_domains = udav_soft.unite_same_Pfam_hits(self.id_to_domains, max_distance, max_hmm_overlap)
             overlap = self.host.project_data_tab.get_overlap()
             self.id_to_domains = udav_soft.filter_Pfam_hits(self.id_to_domains, overlap)
             del COGNAT_basic
@@ -414,6 +442,7 @@ class CladeFrame(tkinter.Frame):
         self.redraw_button.configure(state = tkinter.NORMAL, background = self.host.header, foreground = "#FFFFFF")
 
     def redraw(self, preset_colors = None):
+        self.draw_progress["value"] = 0
         x_mult = float(self.x_mult_widget.get())
         y_mult = float(self.y_mult_widget.get())
         nucl_per_pixel = x_mult * 5
@@ -445,6 +474,7 @@ class CladeFrame(tkinter.Frame):
              new_line_of_objects = self.prepare_neighborhood(curr_top_left_y, arrow_height, nucl_per_pixel, neighborhood, nucl_data_list, self.id_to_domains, self.domain_to_color, self.pids_in_neighborhoods)
              lines_of_objects.append(new_line_of_objects)
              n += 1
+             self.draw_progress["value"] = int(100 * n / len(self.neighborhoods))
 
         protein_ids_to_show = self.protein_ids_safe
         colors = None
@@ -668,13 +698,13 @@ class CladeFrame(tkinter.Frame):
             y0 = i * ((element_height) + self.p)
             domain_size = (total_size_of_hits[domain] / occured_in_proteins[domain]) / aa_per_pixel
             self.legend_canvas.create_text(x0, y0, fill = "#888888", font = text_font, anchor = tkinter.NW, text = "%i" % occured_in_proteins[domain])
-            self.legend_text_objects.append([x0, y0, "%i" % occured_in_proteins[domain], int(element_height)])
+            self.legend_text_objects.append([x0, y0, "%i" % occured_in_proteins[domain], int(element_height), domain])
             fill_color = self.base_domain_color
             if domain in self.domain_to_color:
                 fill_color = self.domain_to_color[domain]
             domain_rectangle_x_end = x0 + number_width + self.p + int(domain_size)
-            self.legend_canvas.create_rectangle(x0 + number_width + self.p, y0, domain_rectangle_x_end, y0 + element_height, fill = fill_color, outline = "")
-            self.legend_objects.append([x0 + number_width + self.p, y0, domain_rectangle_x_end, y0 + element_height, fill_color])
+            self.legend_canvas.create_rectangle(x0 + number_width + self.p, y0, domain_rectangle_x_end, y0 + element_height, tags = ("domain", domain), fill = fill_color, outline = "")
+            self.legend_objects.append([x0 + number_width + self.p, y0, domain_rectangle_x_end, y0 + element_height, domain])
             max_width = max(domain_rectangle_x_end, max_width)
             i += 1
 
@@ -699,7 +729,7 @@ class CladeFrame(tkinter.Frame):
                     curr_font = bold_font
             domain_text = "%s [%s]" % (domain, curr_domain_name)
             descr_text = self.legend_canvas.create_text(x0, y0, fill = "#888888", font = curr_font, anchor = tkinter.NW, text = domain_text)
-            self.legend_text_objects.append([x0, y0, domain_text, int(element_height)])
+            self.legend_text_objects.append([x0, y0, domain_text, int(element_height), domain])
             bounds = self.legend_canvas.bbox(descr_text)  # returns a tuple like (x1, y1, x2, y2)
             max_descr_text_width = max(bounds[2] - bounds[0], max_descr_text_width)
             i += 1
@@ -732,8 +762,13 @@ class CladeFrame(tkinter.Frame):
         export_w = self.max_x
         export_h = self.max_y
         if self.export_legend.get() == True:
+            n_to_export = 0
+            for obj in self.legend_objects:
+                #obj = [x0, y0, x1, y1, domain_id]
+                if obj[4] in self.domain_to_color:
+                    n_to_export += 1
             export_w = max(self.max_x, self.legend_max_x)
-            export_h =+ self.legend_max_y + 25
+            export_h += (self.legend_max_y * n_to_export / len(self.legend_objects)) + 25
 
         drawing = drawsvg.Drawing(export_w, export_h, origin = (0, 0))
         # 1) Drawing arrows, domains and lines
@@ -762,14 +797,36 @@ class CladeFrame(tkinter.Frame):
         if self.export_legend.get() == True:
             legend_data = drawsvg.Group()
             legend_padding = self.max_y + 20
+            skipped_y = list()
             for obj in self.legend_objects:
-                #obj = [x0, y0, x1, y1, fill_color]
-                rh = obj[3] - obj[1]
-                rw = obj[2] - obj[0]
-                legend_data.append(drawsvg.Rectangle(obj[0], obj[1] + legend_padding, rw, rh, fill = obj[4]))
+                #obj = [x0, y0, x1, y1, domain_id]
+                if obj[4] in self.domain_to_color:
+                    curr_fill = self.domain_to_color[obj[4]]
+                    rh = obj[3] - obj[1]
+                    rw = obj[2] - obj[0]
+                    curr_y = obj[1]
+                    if len(skipped_y) != 0: # Skipped elements exist
+                        curr_y = skipped_y.pop(0)
+                        skipped_y.append(obj[1])
+                    legend_data.append(drawsvg.Rectangle(obj[0], curr_y + legend_padding, rw, rh, fill = curr_fill))
+                else:
+                    skipped_y.append(obj[1])
+
+            skipped_y = list()
+            names_started = False
             for text in self.legend_text_objects:
-                #text = [x0, y0, string, text_height]
-                legend_data.append(drawsvg.Text(text[2], text[3], x = text[0], y = text[1] + legend_padding, fill = "#888888", text_anchor = "start", dominant_baseline = "hanging", font_family = "Courier New"))
+                #text = [x0, y0, string, text_height, domain]
+                if (text[2].count("[") != 0) and (not names_started): # This is not occurence count, but domain description started
+                    skipped_y = list()
+                    names_started = True
+                if text[4] in self.domain_to_color:
+                    curr_y = text[1]
+                    if len(skipped_y) != 0: # Skipped elements exist
+                        curr_y = skipped_y.pop(0)
+                        skipped_y.append(text[1])
+                    legend_data.append(drawsvg.Text(text[2], text[3], x = text[0], y = curr_y + legend_padding, fill = "#888888", text_anchor = "start", dominant_baseline = "hanging", font_family = "Courier New"))
+                else:
+                    skipped_y.append(text[1])
             drawing.append(legend_data)
         drawing.save_svg(svg_filename)
         del drawsvg

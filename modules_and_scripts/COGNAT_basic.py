@@ -389,6 +389,11 @@ def assign_proteins_to_domains(id_to_domains, COGNAT_database_dir, gbff, gbk, re
         hmm_covered = fields[4]
         begin = fields[5]
         end = fields[6]
+        hmm_begin = "Unk"
+        hmm_end = "Unk"
+        if len(fields) == 9: # Information about hmm_begin and hmm_end was added
+            hmm_begin = fields[7]
+            hmm_end = fields[8]
         #---- 1) E-value check
         if float(evalue) > max_e_value:
             continue
@@ -399,7 +404,7 @@ def assign_proteins_to_domains(id_to_domains, COGNAT_database_dir, gbff, gbk, re
         else:
             if not domain_name in id_to_domains[protein_id]:
                 id_to_domains[protein_id][domain_name] = ""
-        new_data = "%s..%s..%s..%s..%s..%s..%s " % (begin, end, evalue, score, "Unk", "Unk", hmm_covered) 
+        new_data = "%s..%s..%s..%s..%s..%s..%s " % (begin, end, evalue, score, hmm_begin, hmm_end, hmm_covered) 
         if not new_data in id_to_domains[protein_id][domain_name]: #FIX: if data about this domain was already added in previous neighborhood analysis
             id_to_domains[protein_id][domain_name] += new_data
     domain_hits_file.close()

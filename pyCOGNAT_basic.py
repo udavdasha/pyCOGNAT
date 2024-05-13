@@ -423,8 +423,8 @@ def get_domain_architecture(domains):
     domain_architecture = ""
     sorted_regions = get_sorted_domains(domains)
     for region in sorted_regions:
-        domain_architecture += "%s " % region[4]
-    domain_architecture = domain_architecture.strip()
+        domain_architecture += "%s|" % region[6]
+    domain_architecture = domain_architecture.strip("|")
     return domain_architecture
 
 def get_global_arrow_color(base_color, domains, domain_to_color, base_domain_color):

@@ -273,7 +273,7 @@ class CladeFrame(tkinter.Frame):
             tags = tags.split(" ")
             if tags[0] == "domain":
                 data = tags[1]
-                curr_domain = data.split("..")[4]
+                curr_domain = data.split("..")[6]
                 if not curr_domain in self.domain_to_color: # Domain was not colored
                     RGB_range = range(0,255)
                     rand_color = "#%02x%02x%02x" % (random.choice(RGB_range), random.choice(RGB_range), random.choice(RGB_range))

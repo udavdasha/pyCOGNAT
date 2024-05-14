@@ -288,7 +288,7 @@ class MainMenubar(tkinter.Menu):
         if filename == "": # Cancel
             return
         self.host.settings.tax_colors = filename
-        (self.host.tax_colors, self.host.tax_order) = pyCOGNAT_basic.read_taxonomy_colors(filename)
+        (self.host.gbff_colors, self.host.gbff_order) = pyCOGNAT_basic.read_taxonomy_colors(filename)
 
     def select_database(self):
         database = tkinter.filedialog.askdirectory(initialdir = self.host.settings.cognat_database, title = "Please select COGNAT database folder")

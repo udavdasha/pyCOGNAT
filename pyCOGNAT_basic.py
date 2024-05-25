@@ -401,6 +401,7 @@ def get_domain_rectangles(additional_data, x0, y0, direction, domain_height, gen
     #            [0]   [1]    [2]    [3]      [4]      [5]       [6]
     #COG0001 : "begin..end..evalue..score..hmm_begin..hmm_end..hmm_cover <...>"
     domain_objects = list()
+    colored_domain_occured = False
     # 1) Getting sorted regions
     sorted_regions = get_sorted_domains(domains)
     # 2) Creating domain rectangles
@@ -411,13 +412,14 @@ def get_domain_rectangles(additional_data, x0, y0, direction, domain_height, gen
         color = base_domain_color
         if domain in domain_to_color:
             color = domain_to_color[domain]
+            colored_domain_occured = True
         domain_start = region[0] * arrow_tip_start / gene_length
         domain_end = region[1] * arrow_tip_start / gene_length
         if direction == 1:
             domain_objects.append(DrawableObject("domain", data, [x0 + domain_start, y0 + 1, x0 + domain_end, y0 + domain_height - 1], color, "", non_clickable = False))
         else:
             domain_objects.append(DrawableObject("domain", data, [x0 + arrow_tip_start + arrow_tip_size - domain_end, y0 + 1, x0 + arrow_tip_start + arrow_tip_size - domain_start, y0 + domain_height - 1], color, "", non_clickable = False))
-    return domain_objects
+    return (domain_objects, colored_domain_occured)
 
 def get_domain_architecture(domains):
     domain_architecture = ""
@@ -450,6 +452,7 @@ def get_gene_arrow_and_domains(additional_data, x0, y0, gene_length, protein_len
     """
     gold = 0.618
     base_color = "#e6e6e6"
+    gene_not_colored = True # Method returns now if this object was colored
     #print ("protein_id = '%s', x0 = %s, y0 = %s, gene_length = %s, nucl_per_pixel = %s, arrow_height = %s, arrow_dir = %s" % (protein_id, x0, y0, gene_length, nucl_per_pixel, arrow_height, arrow_direction))
     objects = list()
 
@@ -488,13 +491,17 @@ def get_gene_arrow_and_domains(additional_data, x0, y0, gene_length, protein_len
         polygon_coord.append(x0 + arrow_length)
         polygon_coord.append(y0 + (3 * arrow_height / 4))
     if color_by_architecture == True:
-        base_color = get_global_arrow_color(base_color, domains, domain_to_color, base_domain_color)
+        new_color = get_global_arrow_color(base_color, domains, domain_to_color, base_domain_color)
+        if (new_color != base_color) and (new_color != base_domain_color): # This gene is colored somehow
+            gene_not_colored = False
     arrow_object = DrawableObject("arrow", additional_data, polygon_coord, base_color, "#000000", non_clickable = False)
     objects.append(arrow_object)
     if (domains != None) and (color_by_architecture == False):
-        domain_objects = get_domain_rectangles(additional_data, x0, y0 + (arrow_height / 4), arrow_direction, arrow_height / 2, protein_length, arrow_tip_start, arrow_tip_size, domains, domain_to_color, base_domain_color)
+        (domain_objects, colored_domain_occured) = get_domain_rectangles(additional_data, x0, y0 + (arrow_height / 4), arrow_direction, arrow_height / 2, protein_length, arrow_tip_start, arrow_tip_size, domains, domain_to_color, base_domain_color)
+        if colored_domain_occured:
+            gene_not_colored = False
         objects.extend(domain_objects)
-    return objects
+    return (objects, gene_not_colored)
 
 def report_gene_to_widget(widget, p, real_begin, real_end, real_direction, nucl_seq, curr_org, curr_gbff, curr_taxonomy, domains, domain_to_name):
     widget.text_widget.tag_configure("header", background = "#BBBBBB")
@@ -714,3 +721,38 @@ def print_simple_legend(name_to_color, order_list, svg_filename):
         drawing.append(drawsvg.Text(curr_name, letter_h, x = field + legend_size_x + spacer, y = (i * letter_h) + field + 2, fill = curr_color, text_anchor = "start", dominant_baseline = "hanging", font_family = "Arial"))
     drawing.save_svg(svg_filename)
     del drawsvg
+
+def proceed_gene_not_colored_list(gene_not_colored_list, to_remove):
+    for pair in gene_not_colored_list:
+        # pair = (protein_id, True/False)
+        protein_id = pair[0]
+        not_colored = pair[1]
+        if not_colored:
+            to_remove[protein_id] = True
+        else:
+            break
+
+def hide_uncolored(objects_to_draw, gene_not_colored_list):
+    """
+    Method finds genes which flank the neighborhood and are not colored and
+    filters <objects_to_draw> in order to remove them.
+    """
+    to_remove = dict()
+    proceed_gene_not_colored_list(gene_not_colored_list, to_remove)
+    gene_not_colored_list.reverse()
+    proceed_gene_not_colored_list(gene_not_colored_list, to_remove)
+    i = 0
+    while i < len(objects_to_draw):
+        data_parts = objects_to_draw[i].data.split("..")
+        if objects_to_draw[i].object_type in ["arrow", "domain"]:
+            protein_id = data_parts[-1]
+            if protein_id in to_remove:
+                objects_to_draw.pop(i)
+                i -= 1
+        elif objects_to_draw[i].object_type == "line":
+            this_protein_id = data_parts[-1]
+            next_protein_id = data_parts[-2]
+            if (this_protein_id in to_remove) or (next_protein_id in to_remove):
+                objects_to_draw.pop(i)
+                i -= 1
+        i += 1

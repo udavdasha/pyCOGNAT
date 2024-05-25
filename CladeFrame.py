@@ -38,6 +38,7 @@ class CladeFrame(tkinter.Frame):
         self.min_occur = None # Entry for minimal gene occur
         self.legend_canvas = None
         self.domain_type = None # tkinter string variable
+        self.hide_uncolored = None # tkinter boolean variable
         self.color_type = None # tkinter string variable
         self.show_org = None # tkinter boolean variable
         self.export_legend = None # tkinter boolean variable
@@ -97,18 +98,22 @@ class CladeFrame(tkinter.Frame):
         domain_type_choice["values"] = ("COG", "Pfam")
         domain_type_choice.grid(row = 4, column = 1, sticky = "NSW", padx = self.p, pady = self.p)
         domain_type_choice.current(0)
+        self.hide_uncolored = tkinter.BooleanVar()
+        self.hide_uncolored.set(False)
+        h = tkinter.Checkbutton(left_part, text = "Hide non-colored edges", variable = self.hide_uncolored)
+        h.grid(row = 5, column = 0, columnspan = 2, sticky ="NSW", padx = self.p, pady = self.p)
         #domain_type_choice.bind("<<ComboboxSelected>>", self.draw_data)
-        tkinter.Button(left_part, text = "Draw", font = ("Arial", 10, "bold"), background = self.host.header, foreground = "#FFFFFF", command = self.draw_data).grid(row = 5, column = 0, columnspan = 2, sticky = "NS", padx = self.p, pady = self.p)
+        tkinter.Button(left_part, text = "Draw", font = ("Arial", 10, "bold"), background = self.host.header, foreground = "#FFFFFF", command = self.draw_data).grid(row = 6, column = 0, columnspan = 2, sticky = "NS", padx = self.p, pady = self.p)
         self.neighbor_progress = tkinter.ttk.Progressbar(left_part, value = 0, style = "success.Striped.Horizontal.TProgressbar")
-        self.neighbor_progress.grid(row = 6, column = 0, sticky = "NSEW", padx = self.p, pady = self.p)
+        self.neighbor_progress.grid(row = 7, column = 0, sticky = "NSEW", padx = self.p, pady = self.p)
         self.sort_progress = tkinter.ttk.Progressbar(left_part, value = 0, style = "success.Striped.Horizontal.TProgressbar")
-        self.sort_progress.grid(row = 6, column = 1, sticky = "NSEW", padx = self.p, pady = self.p)
+        self.sort_progress.grid(row = 7, column = 1, sticky = "NSEW", padx = self.p, pady = self.p)
         self.domain_progress = tkinter.ttk.Progressbar(left_part, value = 0, style = "success.Striped.Horizontal.TProgressbar")
-        self.domain_progress.grid(row = 7, column = 0, sticky = "NSEW", padx = self.p, pady = self.p)
+        self.domain_progress.grid(row = 8, column = 0, sticky = "NSEW", padx = self.p, pady = self.p)
         self.draw_progress = tkinter.ttk.Progressbar(left_part, value = 0, style = "success.Striped.Horizontal.TProgressbar")
-        self.draw_progress.grid(row = 7, column = 1, sticky = "NSEW", padx = self.p, pady = self.p)
+        self.draw_progress.grid(row = 8, column = 1, sticky = "NSEW", padx = self.p, pady = self.p)
         self.add_colors = pyCOGNAT_basic.TextFrameWithLabel(left_part, self.p, self.host.back, "#000000", "Add. domain colors:", ("Arial", 10, "bold"), None)
-        self.add_colors.grid(row = 8, column = 0, columnspan = 2, sticky = "NSEW")
+        self.add_colors.grid(row = 9, column = 0, columnspan = 2, sticky = "NSEW")
         central_panel.add(left_part)
 
         central_part = tkinter.Frame(central_panel)
@@ -209,8 +214,8 @@ class CladeFrame(tkinter.Frame):
                         break
                 if domain in self.domain_to_color:
                     export_strings.append("%s\t%s" % (domain, self.domain_to_color[domain]))
-            self.add_colors.add_string("\n".join(export_strings))
             self.add_colors.add_string("\n")
+            self.add_colors.add_string("\n".join(export_strings))
             if how_many == None:
                 self.host.set_status("DONE", "Current colors for all domains were exported", "green")
             else:
@@ -520,6 +525,7 @@ class CladeFrame(tkinter.Frame):
         curr_x0 = 0
         #print ("    Working with new neighborhood:")
         fst_gene_start = neighborhood[0].gene_begin
+        gene_not_colored_list = list()
         for i in range(len(neighborhood)):
             # 1) Creating arrow & domain rectangles for current gene
             curr_gene = neighborhood[i]
@@ -548,7 +554,8 @@ class CladeFrame(tkinter.Frame):
             color_by_architecture = False
             if self.color_type.get() == "Domain architecture":
                 color_by_architecture = True
-            new_objects = pyCOGNAT_basic.get_gene_arrow_and_domains(additional_data, curr_x0, top_left_y, curr_gene_length, curr_prot_length, nucl_per_pixel, arrow_height, curr_direction, curr_domains, domain_to_color, self.base_domain_color, color_by_architecture)
+            (new_objects, gene_not_colored) = pyCOGNAT_basic.get_gene_arrow_and_domains(additional_data, curr_x0, top_left_y, curr_gene_length, curr_prot_length, nucl_per_pixel, arrow_height, curr_direction, curr_domains, domain_to_color, self.base_domain_color, color_by_architecture)
+            gene_not_colored_list.append((stripped_pid, gene_not_colored))
             objects_to_draw.extend(new_objects)
             # 2) Creating intergene line between current and the next gene
             if i != len(neighborhood) - 1: # This is not the last gene
@@ -565,6 +572,8 @@ class CladeFrame(tkinter.Frame):
                     line_y = top_left_y + (arrow_height / 2)
                     objects_to_draw.append(pyCOGNAT_basic.DrawableObject("line", sequence, [line_x0, line_y, line_x1, line_y], "#000000", ""))
                 curr_x0 = (next_gene.gene_begin - fst_gene_start) / nucl_per_pixel
+        if self.hide_uncolored.get(): # Genes which are not colored and flank a neighborhood should be filtered from the <objects_to_draw>
+            pyCOGNAT_basic.hide_uncolored(objects_to_draw, gene_not_colored_list)
         return objects_to_draw
 
     def draw_lines_of_objects(self, lines_of_objects, arrow_height, strings = None, colors = None):

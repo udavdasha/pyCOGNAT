@@ -4868,12 +4868,3 @@ COG5947	CRISPR-Cas system type I-D effector complex subunit Csc1, RAMP superfami
 COG5948	CRISPR-Cas system type I-D effector complex subunit Csc2, RAMP superfamily Cas7 group
 COG5949	CRISPR-Cas system type I-E effector complex small subunit Cse2
 COG5950	CRISPR-Cas system type II-D effector complex subunit Csx10, RAMP superfamily Cas5 group
-uCOG6001	ActA subunit (tetra heme-binding) of the alternative complex III
-uCOG6002	ActB subunit (FeS-cluster-binding) of the alternative complex III
-uCOG6003	ActD subunit (membrane) of the alternative complex III
-uCOG6004	ActE subunit (single heme-binding) of the alternative complex III
-uCOG6005	ActF membrane subunit of the alternative complex III (homolog of ActC)
-uCOG6014	Reaction center L protein (RceL)
-uCOG6015	Reaction center M protein (RceM)
-uCOG6022	Membrane subunit (c/K) of oligomeric rotor of rotary ATPases, two-helical
-uCOG6023	Membrane subunit (c/K) of oligomeric rotor of rotary ATPases, four-helical

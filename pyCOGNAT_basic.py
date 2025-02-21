@@ -503,6 +503,20 @@ def get_gene_arrow_and_domains(additional_data, x0, y0, gene_length, protein_len
         objects.extend(domain_objects)
     return (objects, gene_not_colored)
 
+def report_nucl_seq_to_widget(widget, data):
+    #           [0]       [1]         [2]      [3]       [4]         [5]       [6]
+    # data: "sequence..real_begin..real_end..record..was_reversed..gene1_id..gene2_id"
+    [sequence, real_begin, real_end, record, was_reversed, gene1_id, gene2_id] = data.split("..")
+    if was_reversed == "True":
+        widget.add_string(">%s_complement(%i-%i)\n" % (record, int(real_begin), int(real_end)))
+    else:
+        widget.add_string(">%s_%i-%i\n" % (record, int(real_begin), int(real_end)))
+    widget.add_string("%s\n\n" % sequence)
+
+def report_protein_seq_to_widget(widget, p, curr_org):
+    widget.add_string(">%s %s [%s]\n" % (p.protein_id.strip("*"), p.product, curr_org))
+    widget.add_string("%s\n\n" % p.sequence)
+
 def report_gene_to_widget(widget, p, real_begin, real_end, real_direction, nucl_seq, curr_org, curr_gbff, curr_taxonomy, domains, domain_to_name):
     widget.text_widget.tag_configure("header", background = "#BBBBBB")
     widget.add_tagged_string("Protein gene was selected:", "header")
@@ -546,8 +560,7 @@ def report_gene_to_widget(widget, p, real_begin, real_end, real_direction, nucl_
             widget.add_string("%s\t%i\t%i\t%.1f\t%s\t%s\t%s\t%s\n" % (region[6], region[0], region[1], region[3], region[2], region[4], region[5], region[7]))
     widget.add_string("\n")
     widget.add_tagged_string("Protein sequence (FASTA):", "header")
-    widget.add_string(">%s %s [%s]\n" % (p.protein_id.strip("*"), p.product, curr_org))
-    widget.add_string("%s\n\n" % p.sequence)
+    report_protein_seq_to_widget(widget, p, curr_org)
 
     widget.add_tagged_string("Gene sequence (FASTA, 5'->3'):", "header")
     if real_direction == 1:
@@ -594,6 +607,7 @@ def report_intergene_to_widget(widget, data):
     widget.add_string("gene2_pid  : %s\n\n" % gene2_id)
 
     widget.add_tagged_string("Current region sequence:", "header")
+    
     if was_reversed == "True":
         widget.add_string(">%s_complement(%i-%i)\n" % (record, int(real_begin), int(real_end)))
     else:

@@ -65,9 +65,11 @@ class CladeFrame(tkinter.Frame):
         self.base_domain_color = "#888888"
 
         self.selected = None
+        self.mult_selected = None # Selected with the Shift + click
 
         self.create_UI()
         self.main_canvas.bind("<Button-1>", self.canvas_clicked)
+        self.main_canvas.bind("<Shift-Button-1>", self.canvas_clicked_with_shift)
         self.main_canvas.bind("<Double-Button-1>", self.canvas_doubleclicked)
         self.main_canvas.bind("<MouseWheel>", self.on_mousewheel)
         self.legend_canvas.bind("<Double-Button-1>", self.legend_doubleclicked)
@@ -289,16 +291,83 @@ class CladeFrame(tkinter.Frame):
                     self.redraw(self.domain_to_color)
         self.canvas_clicked(event)
 
-    def canvas_clicked(self, event):
-        dash_pattern = (6, 4)
+    def release_single_selection(self, selected_entry):
+        if selected_entry[1] == "gene":
+            self.main_canvas.itemconfigure(selected_entry[0], outline = "#000000", dash = "")
+        if selected_entry[1] == "intergene":
+            self.main_canvas.itemconfigure(selected_entry[0], fill = "#000000", dash = "")
+        if selected_entry[1] == "domain":
+            self.main_canvas.itemconfigure(selected_entry[0], outline = "", dash = "")
+
+    def release_selection(self):
         if self.selected != None:
-            if self.selected[1] == "gene":
-                self.main_canvas.itemconfigure(self.selected[0], outline = "#000000", dash = "")
-            if self.selected[1] == "intergene":
-                self.main_canvas.itemconfigure(self.selected[0], fill = "#000000", dash = "")
-            if self.selected[1] == "domain":
-                self.main_canvas.itemconfigure(self.selected[0], outline = "", dash = "")
+            self.release_single_selection(self.selected)
+            self.selected = None
+        if self.mult_selected != None:
+            for selected_item in self.mult_selected:
+                self.release_single_selection(selected_item)
+            self.mult_selected = None
+
+    def canvas_clicked_with_shift(self, event):
+        if self.selected != None:
+            self.release_single_selection(self.selected)
+            self.selected = None
         self.report_widget.clear()
+        dash_pattern = (6, 4)
+        real_x = self.main_canvas.canvasx(event.x)
+        real_y = self.main_canvas.canvasy(event.y)
+        item = self.main_canvas.find_closest(real_x, real_y)
+        
+        item_was_already_added = False
+        if self.mult_selected == None:
+            self.mult_selected = list()
+        else:
+            i = 0
+            while i < len(self.mult_selected):
+                selected_item = self.mult_selected[i]
+                if item == selected_item[0]: # This item was already into selection
+                    self.release_single_selection(selected_item)
+                    self.mult_selected.pop(i)
+                    item_was_already_added = True
+                    break
+                i += 1
+        if not item_was_already_added:
+            tags = self.main_canvas.itemcget(item, "tags")
+            if tags != "":
+                tags = tags.split(" ")
+                if tags[0] == "gene":
+                    self.main_canvas.itemconfigure(item, outline = "blue", dash = dash_pattern)
+                    self.mult_selected.append((item, tags[0], tags[1]))
+                if tags[0] == "intergene":
+                    self.main_canvas.itemconfigure(item, fill = "blue", dash = dash_pattern)
+                    self.mult_selected.append((item, tags[0], tags[1]))
+
+        for selected_item in self.mult_selected: 
+            data = selected_item[2]
+            parts = data.split("..")
+            if selected_item[1] == "gene": # For gene entries protein FASTA sequences will be printed
+                try:
+                    protein_id = parts[4].strip("*")
+                    curr_gbk = self.proteins[protein_id].source_record
+                    curr_org = "Unk"
+                    if curr_gbk in self.nucl_id_to_data:
+                        curr_org = self.nucl_id_to_data[curr_gbk][0]
+                    domain_data = None
+                    if protein_id in self.id_to_domains:
+                        domain_data = self.id_to_domains[protein_id]
+                    pyCOGNAT_basic.report_protein_seq_to_widget(self.report_widget, self.proteins[protein_id], curr_org)
+                except:
+                    print("Something went wrong for the protein with the following data: '%s'" % data)
+            if selected_item[1] == "intergene": # For gene entries nucleotide FASTA sequences will be printed
+                try:
+                    pyCOGNAT_basic.report_nucl_seq_to_widget(self.report_widget, data)
+                except:
+                    print("Something went wrong for the intergene region with the following data: '%s'" % data)
+
+    def canvas_clicked(self, event):
+        self.release_selection() # releasing previously selected object
+        self.report_widget.clear()
+        dash_pattern = (6, 4)
         real_x = self.main_canvas.canvasx(event.x)
         real_y = self.main_canvas.canvasy(event.y)
         item = self.main_canvas.find_closest(real_x, real_y)

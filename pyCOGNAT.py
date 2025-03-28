@@ -119,7 +119,7 @@ class pyCOGNAT(tkinter.Frame):
             return
         os.mkdir(new_project_path)
 
-        ids_filename = tkinter.filedialog.askopenfilename(filetypes = (("Plain text", "*.txt"), ("All", "*.*")), title = "Please select a file with protein IDs or locuses")
+        ids_filename = tkinter.filedialog.askopenfilename(filetypes = (("Plain text", "*.txt"), ("IDs or loci", "*.ids"), ("All", "*.*")), title = "Please select a file with protein IDs or locuses")
         if ids_filename == "": # Cancel
             return
 

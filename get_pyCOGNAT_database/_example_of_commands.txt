@@ -1,0 +1,42 @@
+# This is an example of pipeline for creating a pyCOGNAT database on a Linux machine. Use respective
+# Windows-specific commands (md -> mkdir, mv -> move etc) and <.hmmscan.bat> file instead if you
+# run the process on a Windows machine.
+#
+# 1) Read a set of GenBank files into URef-formatted FASTA sequences of proteins
+#    and nucleotide sequences:
+# read_any_gbk.py -i merged_gbk_files.gbk -o output_prefix
+#
+# 2) Move nucleotide and protein sequences into separate directories:
+# md nucl
+# mv *.nucl.fasta ./nucl/
+# md prot
+# mv *.nucl.fasta ./prot/
+#
+# 3) Download a database of COG profile HMMs from http://boabio.belozersky.msu.ru/en/tools and
+#    install HMMer (http://hmmer.org/).
+#
+# 4) Prepare <output_prefix.hmmscan.bash> script: provide a path to the COG database and to the 
+# <hmmscan> executable inside the bash script body.
+#
+# 5) Run <hmmscan>
+# mv output_prefix.hmmscan.bash ./prot/
+# chmod +x ./prot/output_prefix.hmmscan.bash
+# nohup ./prot/output_prefix.hmmscan.bash &
+#
+# 6) After the script finishes, move -domtblout output files to a separate directory:
+# md to_COGs
+# mv *.table.domains ./to_COGs/
+#
+# 7) (OPTIONAL) Download a database of Pfam profile HMMs, provide a path to in the the 
+#    <output_prefix.hmmscan.bash> body, run the script again; after it finishes, move
+#    -domtblout output files to a separate directory:
+# md to_Pfam
+# mv *.table.domains ./to_Pfam/
+#
+# 8) Run the main script which obtaines pyCOGNAT database (use either '-m locus' to create a database based on
+#    <locus_tag> identifiers or '-m ID' to use <protein_id> instead:
+# create_COGNAT_database.py -i prot -c to_COGs -n nucl -o output_prefix_COGNAT -l output_prefix_COGNAT.log -m ID -p to_Pfam -e 0.1
+#
+# 9) (OPTIONAL) Cure a database if given IDs could be not unique:
+# cure_COGNAT_database.py -i output_prefix_COGNAT
+

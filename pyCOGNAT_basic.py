@@ -624,7 +624,7 @@ def get_complement(sequence):
         if s in complement:
             rev += complement[s]
         else:
-            print ("FATAL ERROR: unknown nucleotide '%s' was detected in <get_complement> method!" % s)
+            print ("FATAL ERROR: unknown nucleotide '%s' (HEX code: '%s') was detected in <get_complement> method!" % (s, hex(ord(s))))
             return None
     rev = rev[::-1] #Extended slice syntax: reversing order
     return rev

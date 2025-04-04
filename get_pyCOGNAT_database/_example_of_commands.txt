@@ -7,9 +7,9 @@
 # read_any_gbk.py -i merged_gbk_files.gbk -o output_prefix
 #
 # 2) Move nucleotide and protein sequences into separate directories:
-# md nucl
+# mkdir nucl
 # mv *.nucl.fasta ./nucl/
-# md prot
+# mkdir prot
 # mv *.nucl.fasta ./prot/
 #
 # 3) Download a database of COG profile HMMs from http://boabio.belozersky.msu.ru/en/tools and
@@ -24,13 +24,13 @@
 # nohup ./prot/output_prefix.hmmscan.bash &
 #
 # 6) After the script finishes, move -domtblout output files to a separate directory:
-# md to_COGs
+# mkdir to_COGs
 # mv *.table.domains ./to_COGs/
 #
 # 7) (OPTIONAL) Download a database of Pfam profile HMMs, provide a path to in the the 
 #    <output_prefix.hmmscan.bash> body, run the script again; after it finishes, move
 #    -domtblout output files to a separate directory:
-# md to_Pfam
+# mkdir to_Pfam
 # mv *.table.domains ./to_Pfam/
 #
 # 8) Run the main script which obtaines pyCOGNAT database (use either '-m locus' to create a database based on

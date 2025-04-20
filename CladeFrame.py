@@ -4,6 +4,7 @@ import tkinter
 import tkinter.ttk
 import tkinter.font
 import tkinter.colorchooser
+import tkinter.messagebox as tkMessageBox
 import pyCOGNAT_basic
 
 def get_canvas(parent, width, height):
@@ -921,9 +922,11 @@ class CladeFrame(tkinter.Frame):
         self.host.tabs.tab(curr_index, text = clade_name)
 
     def close(self):
-        curr_tab_index = self.host.tabs.index("current")
-        self.host.tabs.forget(curr_tab_index)
-        self.host.clade_tabs.pop(curr_tab_index)
+        result = tkMessageBox.askquestion("Closing the current tab", "Are you sure you want to close this tab?", icon = "warning")
+        if result == "yes":
+            curr_tab_index = self.host.tabs.index("current")
+            self.host.tabs.forget(curr_tab_index)
+            self.host.clade_tabs.pop(curr_tab_index)
 
     def refresh(self, event):
         print ("Selected domain type is: '%s'" % self.domain_type.get())

@@ -40,6 +40,7 @@ class pyCOGNAT(tkinter.Frame):
         self.pfam_to_name = None
         self.gbff_colors = None
         self.gbff_order = None
+        self.project_path = None # Path to the project directory
 
         req_settings = ["script_dir", "work_dir", "cognat_database", "cog_descr_file", "pfam_descr_file"]
         self.settings = Settings.read_settings_file(settings_filename, req_settings)
@@ -117,12 +118,12 @@ class pyCOGNAT(tkinter.Frame):
         if os.path.isdir(new_project_path):
             self.set_status("ERROR", "Project with this name already exists", "red")
             return
-        os.mkdir(new_project_path)
-
         ids_filename = tkinter.filedialog.askopenfilename(filetypes = (("Plain text", "*.txt"), ("IDs or loci", "*.ids"), ("All", "*.*")), title = "Please select a file with protein IDs or locuses")
         if ids_filename == "": # Cancel
             return
+        os.mkdir(new_project_path) # Now project directory is created only if <ids_filename> was selected, not before
 
+        self.project_path = new_project_path
         self.project_data_tab.protein_ids.read_from_file(ids_filename) # Reading file to a <protein_ids> widget
         ids_list = self.project_data_tab.protein_ids.get_content_as_list() # Obtaining list of protein ids
         self.project_data_tab.print_to_console("Obtained %i protein IDs/locuses. Slicing of the COGNAT database started" % len(ids_list))
@@ -142,7 +143,8 @@ class pyCOGNAT(tkinter.Frame):
 
     def load_project(self, project_dir = None):
         if project_dir == None:
-            project_dir = tkinter.filedialog.askdirectory(initialdir = self.settings.work_dir, title = "Please select the directory to load a project")
+            project_dir = tkinter.filedialog.askdirectory(title = "Please select the directory to load a project") # initialdir was messing up the loading outside of the work_dir
+            print("Path to project directory to load: '%s'" % project_dir)
             if project_dir == "": # Cancel
                 return
         if not os.path.isdir(os.path.join(project_dir, "COGNAT_database")): # no COGNAT database is found in this directory

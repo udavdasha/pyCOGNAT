@@ -3,7 +3,7 @@
 This is a main script of the <pyCOGNAT> program
 @ Daria Dibrova aka udavdasha
 """
-curr_version = "0.0.1"
+curr_version = "0.0.2"
 import tkinter
 import tkinter.messagebox as tkMessageBox
 import tkinter.filedialog
@@ -154,6 +154,7 @@ class pyCOGNAT(tkinter.Frame):
         try:
             self.project_data_tab.clear()
             self.project_data_tab.load(project_dir)
+            self.settings.work_dir = os.path.split(project_dir)[0] # FIX 0.0.2: now projects from different working directories could be properly red
 
             for tab in self.clade_tabs:
                 self.tabs.forget(tab)

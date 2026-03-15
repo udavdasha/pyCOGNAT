@@ -3,7 +3,7 @@
 This is a main script of the <pyCOGNAT> program
 @ Daria Dibrova aka udavdasha
 """
-curr_version = "0.0.2"
+curr_version = "0.0.3"
 import tkinter
 import tkinter.messagebox as tkMessageBox
 import tkinter.filedialog
@@ -126,11 +126,19 @@ class pyCOGNAT(tkinter.Frame):
         self.project_path = new_project_path
         self.project_data_tab.protein_ids.read_from_file(ids_filename) # Reading file to a <protein_ids> widget
         ids_list = self.project_data_tab.protein_ids.get_content_as_list() # Obtaining list of protein ids
-        self.project_data_tab.print_to_console("Obtained %i protein IDs/locuses. Slicing of the COGNAT database started" % len(ids_list))
-        self.set_status("WORKING", "Slicing of the COGNAT database started...", "red")
         database_slice_path = os.path.join(new_project_path, "COGNAT_database")
         os.mkdir(database_slice_path)
-        gbff_num = pyCOGNAT_basic.obtain_database_slice(self.settings.cognat_database, database_slice_path, self.settings.script_dir, ids_list, max_gene_number, self.project_data_tab.initital_progress, self.project_data_tab.reading_progress, self.project_data_tab.loading_progress, self.parent)
+        #FIX: v. 0.0.3: allows to search in several COGNAT database folders if <database_path> is not a single path
+        database_paths = self.settings.cognat_database.split(";")
+        gbff_num = 0
+        n = 0
+        self.project_data_tab.print_to_console("Obtained %i protein IDs/locuses. Total %i COGNAT databases found. Slicing of the COGNAT database started" % (len(ids_list), len(database_paths)))
+        for d_path in database_paths:
+            n += 1
+            self.set_status("WORKING", "Slicing of the COGNAT database started... (%i out of %i)" % (n, len(database_paths)), "red")
+            curr_gbff_num = pyCOGNAT_basic.obtain_database_slice(d_path, database_slice_path, self.settings.script_dir, ids_list, max_gene_number, self.project_data_tab.initital_progress, self.project_data_tab.reading_progress, self.project_data_tab.loading_progress, self.parent)
+            gbff_num += curr_gbff_num
+        #gbff_num = pyCOGNAT_basic.obtain_database_slice(self.settings.cognat_database, database_slice_path, self.settings.script_dir, ids_list, max_gene_number, self.project_data_tab.initital_progress, self.project_data_tab.reading_progress, self.project_data_tab.loading_progress, self.parent)
         if gbff_num == None:
             self.project_data_tab.print_to_console("Slicing of the COGNAT database failed")
             self.set_status("ERROR", "Slicing of the COGNAT database failed", "red")

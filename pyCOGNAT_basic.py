@@ -4,6 +4,8 @@ import copy
 import tkinter
 import tkinter.font
 
+curr_version = "0.2"
+
 def check_filename(filename):
     if re.search("[^\w]", filename) != None:
         return False

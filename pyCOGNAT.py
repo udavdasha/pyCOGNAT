@@ -3,7 +3,7 @@
 This is a main script of the <pyCOGNAT> program
 @ Daria Dibrova aka udavdasha
 """
-curr_version = "0.0.3"
+curr_version = "0.0.4"
 import tkinter
 import tkinter.messagebox as tkMessageBox
 import tkinter.filedialog

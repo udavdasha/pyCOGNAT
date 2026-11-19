@@ -46,8 +46,9 @@ class CladeFrame(tkinter.Frame):
         self.x_mult_widget = None
         self.y_mult_widget = None
         self.offset_widget = None
+        self.COG_to_take = None # Name of domain to be exported
 
-        self.neighborhoods = None
+        self.neighborhoods = None # Smallest obejct will be of <udav_fasta.Annotated_sequence> class
         self.id_to_domains = None
         self.proteins = None # Current dictionary of proteins (<Annotated_sequence> objects)
         self.protein_ids_safe = None
@@ -180,6 +181,15 @@ class CladeFrame(tkinter.Frame):
         self.action_mode.report_widget = self.report_widget
         right_part.add(top_right_part)
 
+        central_right_frame = tkinter.Frame(right_part)
+        central_right_frame.grid_rowconfigure(0, weight = 1)
+        central_right_frame.grid_columnconfigure(1, weight = 1)
+        tkinter.Label(central_right_frame, text = "Enter domain ID:", justify = tkinter.RIGHT).grid(row = 0, column = 0, sticky = "NSE", padx = self.p, pady = self.p)
+        self.COG_to_take = tkinter.Entry(central_right_frame, width = 15, font = ("Courier New", 10))
+        self.COG_to_take.grid(row = 0, column = 1, sticky = "NSE", padx = self.p, pady = self.p)
+        tkinter.Button(central_right_frame, font = ("Arial", 10, "bold"), text = "Get sequences", background = self.host.header, foreground = "#FFFFFF", command = self.get_COG_to_take).grid(row = 0, column = 2, sticky = "NSE", padx = self.p, pady = self.p)
+        right_part.add(central_right_frame)
+
         bottom_right_frame = tkinter.Frame(right_part)
         bottom_right_frame.grid_rowconfigure(1, weight = 1)
         bottom_right_frame.grid_columnconfigure(0, weight = 1)
@@ -199,6 +209,39 @@ class CladeFrame(tkinter.Frame):
         central_panel.sash_place(0, 225, 1)
         central_panel.sash_place(1, 1450, 1)
         right_part.sash_place(0, 1, 700)
+        right_part.sash_place(1, 1, 750)
+
+    def get_COG_to_take(self):
+        req_COG = self.COG_to_take.get().strip()
+        self.report_widget.clear()
+        n = 0
+        proteins_to_take = dict()
+        if self.neighborhoods == None:
+            self.host.set_status("ERROR", "Gene neighborhoods were not loaded, no sequences can be extracted!", "red")
+            return
+
+        for neighborhood in self.neighborhoods:
+            for p in neighborhood:
+                take_p = False
+                pid_stripped = p.protein_id.strip("*")
+                if pid_stripped in self.id_to_domains: # Domains for this protein are known
+                    for domain in self.id_to_domains[pid_stripped].keys():
+                        if domain == req_COG:
+                            take_p = True
+                            break
+                if take_p:
+                    proteins_to_take[pid_stripped] = p
+        for pid in proteins_to_take:
+            curr_gbk = self.proteins[pid].source_record
+            curr_org = "Unk"
+            if curr_gbk in self.nucl_id_to_data:
+                curr_org = self.nucl_id_to_data[curr_gbk][0]
+            pyCOGNAT_basic.report_protein_seq_to_widget(self.report_widget, self.proteins[pid], curr_org)
+            n += 1
+        if n != 0:
+            self.host.set_status("DONE", "Total %i proteins with domain '%s' are extracted!" % (n, req_COG), "green")
+        else:
+            self.host.set_status("ERROR", "No proteins were found with domain '%s'!" % req_COG, "red")
 
     def export_colors(self):
         curr_min_occur = self.min_occur.get().strip()
